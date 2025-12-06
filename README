@@ -1,51 +1,52 @@
-NOTE: we have stopped maintaining the x86 version of xv6, and switched
-our efforts to the RISC-V version
-(https://github.com/mit-pdos/xv6-riscv.git)
+Title: Enhancing CPU Scheduling and Fairness Using Ticket Lock in xv6
+In this project, we are building an improved version of the xv6 operating system by adding two new features, a lottery based CPU scheduler and a fair ticket based locking system. This upgrades make the system fairer, more predictable. The idea is to control how processes get CPU time and how they access shared resources, ensuring fairness.
+ 
+Feature 1: Adaptive Lottery Scheduler for Fair CPU Sharing
+In this project, we upgrade the xv6 CPU scheduler into a workflow based adaptive lottery scheduler. Instead of using fixed tickets, processes can now update, request, exchange, and accumulate tickets during execution. This makes CPU allocation more dynamic, fair, and behavior based.
+System Calls:
+set_base_tickets(int n): Set or update the base ticket count of the current process.
+update_ticket_status(struct pstat*): Returns full process ticket information, including:
+1.     base tickets
+2.     accumulated tickets
+3.     exchanged tickets
+4.     dependency info
+5.     total CPU ticks
+ 
+Short Implementation Overview
+Workflow:
+Process Init → Routine Execution → Ticket Update → Ticket Request → Ticket Exchange → Ticket Accumulation
+ 
+Process Initialization
+Each process starts with base tickets, zero accumulated tickets, and optional dependency ID.
+ Routine Execution
+When a process completes routine tasks, it earns reward tickets.
+Ticket Update
+Before each scheduling cycle, reward tickets are merged into the main ticket count.
+Ticket Request
+A process can ask for more tickets using:
+set_base_tickets(current + extra)
+This increases its chance to win the CPU lottery.
+Ticket Exchange
+Dependent processes (parent–child or cooperative tasks) can share or donate tickets to each other.
+Ticket Accumulation
+Unused reward tickets accumulate over time, giving waiting processes a fairer chance to run.
+ 
+Updated Lottery Scheduling Logic
+The scheduler uses:
+effective_tickets = base_tickets + accumulated_tickets - exchanged_tickets
+The process with the winning ticket gets the CPU.
+ 
 
-xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
-Version 6 (v6).  xv6 loosely follows the structure and style of v6,
-but is implemented for a modern x86-based multiprocessor using ANSI C.
-
-ACKNOWLEDGMENTS
-
-xv6 is inspired by John Lions's Commentary on UNIX 6th Edition (Peer
-to Peer Communications; ISBN: 1-57398-013-7; 1st edition (June 14,
-2000)). See also https://pdos.csail.mit.edu/6.828/, which
-provides pointers to on-line resources for v6.
-
-xv6 borrows code from the following sources:
-    JOS (asm.h, elf.h, mmu.h, bootasm.S, ide.c, console.c, and others)
-    Plan 9 (entryother.S, mp.h, mp.c, lapic.c)
-    FreeBSD (ioapic.c)
-    NetBSD (console.c)
-
-The following people have made contributions: Russ Cox (context switching,
-locking), Cliff Frey (MP), Xiao Yu (MP), Nickolai Zeldovich, and Austin
-Clements.
-
-We are also grateful for the bug reports and patches contributed by Silas
-Boyd-Wickizer, Anton Burtsev, Cody Cutler, Mike CAT, Tej Chajed, eyalz800,
-Nelson Elhage, Saar Ettinger, Alice Ferrazzi, Nathaniel Filardo, Peter
-Froehlich, Yakir Goaron,Shivam Handa, Bryan Henry, Jim Huang, Alexander
-Kapshuk, Anders Kaseorg, kehao95, Wolfgang Keller, Eddie Kohler, Austin
-Liew, Imbar Marinescu, Yandong Mao, Matan Shabtay, Hitoshi Mitake, Carmi
-Merimovich, Mark Morrissey, mtasm, Joel Nider, Greg Price, Ayan Shafqat,
-Eldar Sehayek, Yongming Shen, Cam Tenny, tyfkda, Rafael Ubal, Warren
-Toomey, Stephen Tu, Pablo Ventura, Xi Wang, Keiichi Watanabe, Nicolas
-Wolovick, wxdao, Grant Wu, Jindong Zhang, Icenowy Zheng, and Zou Chang Wei.
-
-The code in the files that constitute xv6 is
-Copyright 2006-2018 Frans Kaashoek, Robert Morris, and Russ Cox.
-
-ERROR REPORTS
-
-We don't process error reports (see note on top of this file).
-
-BUILDING AND RUNNING XV6
-
-To build xv6 on an x86 ELF machine (like Linux or FreeBSD), run
-"make". On non-x86 or non-ELF machines (like OS X, even on x86), you
-will need to install a cross-compiler gcc suite capable of producing
-x86 ELF binaries (see https://pdos.csail.mit.edu/6.828/).
-Then run "make TOOLPREFIX=i386-jos-elf-". Now install the QEMU PC
-simulator and run "make qemu".
+ 
+Feature 2: Ticket Lock for Fairness
+We are going to add a simple, fair ticket based spin lock in xv6 operating system. Every process gets a turn number when requesting the lock, and only the process with the current turn can enter. This prevents unfairness or starvation caused by the default xv6 spinlock.
+ 
+Short Implementation Method:
+ Adding a ticket number and a turn number to the lock. When a process tries to lock, it gets a ticket and waits until it’s ticket matches the turn. When it finishes, it increases the turn so the next process can enter.
+ 
+Evaluation
+ We will measure fairness in two ways:
+1.CPU Fairness Graph:
+  Three processes with a ticket ratio 3:2:1 will run, and a gantt chart will show how many time slices each process gets. The counts should follow the same ratio over time.
+2.Lock Fairness Test:
+  Multiple processes will repeatedly acquire and release the new ticket lock, and results should show that every process gets the lock in exact arrival order, with no starvation.
